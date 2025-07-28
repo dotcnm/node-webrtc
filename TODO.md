@@ -1,1 +1,3 @@
-There is a hang in the test "after setting iceCandidatePoolSize"
+# TODO
+
+- [ ] Destructors fire in RTCDataChannel use-case" hangs, seems to spin
