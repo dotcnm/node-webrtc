@@ -27,6 +27,11 @@ jobs:
           python-version: '3.9'
           architecture: 'x64'
 
+      - name: Windows SDKs List
+        shell: cmd
+        run: |
+          echo Listing installed Windows SDKs...
+          dir "C:\Program Files (x86)\Windows Kits\10\Include\" /AD /B
       # 3. 安装 Visual Studio 构建工具（MSVC）和 Windows SDK
     #  - name: Setup MSVC Build Tools
        # uses: ilammy/msvc-dev-cmd@v1
