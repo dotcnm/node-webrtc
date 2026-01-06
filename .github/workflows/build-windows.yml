@@ -178,11 +178,6 @@ jobs:
         continue-on-error: true 
         run: |
           npx cmake-js build 
-      - name: build1
-        shell: cmd
-        continue-on-error: true 
-        run: |
-          npx cmake-js build 
       - name: Download and replace BUILD.gn
         run: |
           # 创建目标目录（如果不存在）
@@ -201,6 +196,11 @@ jobs:
             exit 1
           fi
           
+      - name: build1
+        shell: cmd
+        continue-on-error: true 
+        run: |
+          npx cmake-js build
       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: build2
         shell: cmd
