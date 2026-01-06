@@ -8,7 +8,7 @@ jobs:
     env:
       # 关键环境变量，解决 Visual Studio 检测和工具链问题
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
-      GYP_MSVS_VERSION: 2017
+      GYP_MSVS_VERSION: 2019
       TARGET_ARCH: '"x64"' 
       # 可选：设置 Python 3.9 的路径，避免冲突
       PYTHON: 'C:\hostedtoolcache\windows\Python\3.9.13\x64\python.exe'
@@ -173,9 +173,7 @@ jobs:
       - name: configure
         shell: cmd
         run: |
-          set GN_ARGS=treat_warnings_as_errors=false
-          set GYP_DEFINES=treat_warnings_as_errors=false
-          npx cmake-js configure --msvs_version=2017
+          npx cmake-js configure --msvs_version=2019
        # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: build
         shell: cmd
