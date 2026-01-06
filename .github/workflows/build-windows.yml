@@ -1,0 +1,205 @@
+name: Build node-webrtc (Windows x64)
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-2019  # 关键：使用 Windows 环境 
+    env:
+      # 关键环境变量，解决 Visual Studio 检测和工具链问题
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
+      GYP_MSVS_VERSION: 2017
+      TARGET_ARCH: '"x64"' 
+      # 可选：设置 Python 3.9 的路径，避免冲突
+      PYTHON: 'C:\hostedtoolcache\windows\Python\3.9.13\x64\python.exe'
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 设置 Python 环境（确保版本为 3.9，避免pipes模块问题）
+      - name: Setup Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          architecture: 'x64'
+
+      # 3. 安装 Visual Studio 构建工具（MSVC）和 Windows SDK
+    #  - name: Setup MSVC Build Tools
+       # uses: ilammy/msvc-dev-cmd@v1
+        #with:
+         #arch: x64
+          # vsversion: '[15,16)'
+          # toolset: '15.0'
+      - name: Install Visual Studio 2017 BuildTools
+        shell: powershell
+        run: |
+          $installerPath = "$env:TEMP\vs_buildtools_2017.exe"
+          $downloadUrl = "https://aka.ms/vs/15/release/vs_enterprise.exe"
+      
+          Write-Host "Step 1: Downloading VS 2017 BuildTools from $downloadUrl ..."
+          # 使用带重试机制和进度条的下载方式
+          $retryCount = 0
+          $maxRetries = 2
+          while ($retryCount -lt $maxRetries) {
+            try {
+              (New-Object System.Net.WebClient).DownloadFile($downloadUrl, $installerPath)
+              Write-Host "Download completed successfully."
+              break
+            } catch {
+              $retryCount++
+              Write-Warning "Download attempt $retryCount failed: $_"
+              if ($retryCount -eq $maxRetries) {
+                Write-Error "Failed to download VS 2017 BuildTools after $maxRetries attempts."
+                exit 1
+              }
+              Start-Sleep -Seconds 5
+            }
+          }
+      
+          # 验证文件已下载
+          if (-not (Test-Path $installerPath)) {
+            Write-Error "Installer file not found after download."
+            exit 1
+          }
+          Write-Host "File size: $((Get-Item $installerPath).Length / 1MB) MB"
+      
+          Write-Host "Step 2: Installing VS 2017 BuildTools (this will take 15-30 minutes)..."
+          # 核心：静默安装指定的工作负载和组件
+          # --wait 参数会等待安装完成，这在CI中至关重要
+          $installArgs = @(
+            "--wait",
+            "--quiet",
+            "--norestart",
+            "--nocache",
+            "--add", "Microsoft.VisualStudio.Workload.VCTools", # C++核心工具
+            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+            "--add", "Microsoft.VisualStudio.Component.VC.ATL",  # 可选，但推荐
+            "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041" # 一个匹配的SDK
+          )
+          
+          $process = Start-Process -FilePath $installerPath -ArgumentList $installArgs -PassThru -Wait -NoNewWindow
+          
+          Write-Host "Step 3: Installation finished with exit code: $($process.ExitCode)"
+          # 退出码0表示成功，3010表示成功但需要重启（在CI中可忽略）
+          if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
+            Write-Error "Installation failed with exit code $($process.ExitCode)."
+            exit 1
+          }
+      
+          Write-Host "Step 4: Verifying installation..."
+          $vcToolsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC"
+          if (Test-Path $vcToolsPath) {
+            Get-ChildItem $vcToolsPath | Select-Object -ExpandProperty Name | Write-Host
+            Write-Host "VS 2017 BuildTools appears to be installed successfully."
+          } else {
+            Write-Warning "Expected VC tools path not found. The installation might have completed but in a different location."
+          }
+
+
+      - name: Find VS using vswhere (Fallback)
+        shell: cmd
+        run: |
+          REM 使用 vswhere 查找所有 MSVC 工具链
+          "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        continue-on-error: true
+     
+      - name: Install Windows 10 SDK (10.0.19041.0) via Chocolatey
+        uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
+        with:
+          sdk-version: 19041
+      - name: Verify Installed Windows SDKs
+        shell: cmd
+        run: |
+          echo Listing installed Windows SDKs...
+          dir "C:\Program Files (x86)\Windows Kits\10\Include\" /AD /B
+       # 4. 安装并配置 Ninja 构建系统
+      - name: Install and Configure Ninja
+        shell: cmd
+        run: |
+          choco install -y ninja
+      # 7. 缓存关键目录（核心加速步骤）
+      - name: Cache WebRTC dependencies
+        uses: actions/cache@v4
+        id: cache-webrtc
+        with:
+          path: |
+            build
+            build-win32-x64
+            node_modules
+          key: ${{ runner.os }}-webrtc-${{ hashFiles('package-lock.json', 'package.json') }}
+       
+     
+      # 5. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 根据项目要求调整
+          # cache: 'npm'
+
+      # 6. 获取 depot_tools
+      - name: Setup depot_tools
+        run: |
+          # 仅当目录不存在时克隆，避免重复下载
+          if (!(Test-Path depot_tools)) {
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          }
+          # 将路径添加到环境变量
+          echo "depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+
+      # 8. 同步依赖（仅在缓存未命中时执行）
+      - name: Sync dependencies (WebRTC & npm)
+        if: steps.cache-webrtc.outputs.cache-hit != 'true'
+        shell: cmd  # 在 Windows 上，depot_tools 的某些脚本在 cmd 下更可靠
+        run: |
+          npm install
+
+      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      - name: Build with cmake-js / node-gyp
+        shell: cmd
+        run: |
+          echo. > nix.gni
+          npx node-gyp clean
+          
+     # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      - name: configure
+        shell: cmd
+        run: |
+          set GN_ARGS=treat_warnings_as_errors=false
+          set GYP_DEFINES=treat_warnings_as_errors=false
+          npx cmake-js configure --msvs_version=2017
+       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      - name: build
+        shell: cmd
+        continue-on-error: true 
+        run: |
+          npx cmake-js build 
+      - name: build1
+        shell: cmd
+        continue-on-error: true 
+        run: |
+          npx cmake-js build 
+      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      - name: build2
+        shell: cmd
+        continue-on-error: true 
+        run: |
+          npm run build
+      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      - name: dir
+        shell: cmd
+        run: |
+          dir D:\a\node-webrtc\node-webrtc
+          
+
+      # 10. （可选）上传构建产物
+      - name: Upload artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-module
+          path: |
+            build-*/
+            **/*.log
