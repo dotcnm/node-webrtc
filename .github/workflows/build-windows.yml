@@ -180,21 +180,18 @@ jobs:
           npx cmake-js build 
       - name: Download and replace BUILD.gn
         run: |
-          # 创建目标目录（如果不存在）
-          mkdir -p build/external/libwebrtc/download/src/build/toolchain/win
-          
+          mkdir -Force -p  build/external/libwebrtc/download/src/build/toolchain/win
+                    
           # 下载文件并替换
-          curl -L "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/BUILD.gn" \
-            -o "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
-          
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/BUILD.gn" `
+              -OutFile "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
+                    
           # 验证文件是否下载成功
-          if [ -f "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn" ]; then
-            echo "File downloaded and replaced successfully"
-            ls -la "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
-          else
-            echo "Failed to download file"
-            exit 1
-          fi
+          if (Test-Path "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn") {
+              Write-Output "File downloaded and replaced successfully"
+          } else {
+              Write-Output "Failed to download file"
+          }
           
       - name: build1
         shell: cmd
