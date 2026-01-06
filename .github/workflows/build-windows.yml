@@ -166,7 +166,7 @@ jobs:
       - name: Download and replace nix.gni
         run: |
           # 下载文件并替换
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni?Expires=1767695710&OSSAccessKeyId=TMP.3KtDE7ZwM3apdMjGNWpKT6X3pAiVXr3uwcveWD5UwQjasyVq6ATztqVyy11G7ABPssQkkV3JnXaieemfvr6ZcPDJC4cXwe&Signature=XtRhh9mPphJqNL6TpsNYvx2GMlQ%3D" `
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
               -OutFile "nix.gni"
           
      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
