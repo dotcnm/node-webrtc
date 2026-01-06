@@ -183,6 +183,24 @@ jobs:
         continue-on-error: true 
         run: |
           npx cmake-js build 
+      - name: Download and replace BUILD.gn
+        run: |
+          # 创建目标目录（如果不存在）
+          mkdir -p build/external/libwebrtc/download/src/build/toolchain/win
+          
+          # 下载文件并替换
+          curl -L "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/BUILD.gn" \
+            -o "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
+          
+          # 验证文件是否下载成功
+          if [ -f "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn" ]; then
+            echo "File downloaded and replaced successfully"
+            ls -la "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
+          else
+            echo "Failed to download file"
+            exit 1
+          fi
+          
       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: build2
         shell: cmd
