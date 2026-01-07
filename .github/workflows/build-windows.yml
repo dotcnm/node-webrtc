@@ -168,6 +168,8 @@ jobs:
           # 下载文件并替换
           Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
               -OutFile "nix.gni"
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/CMakeLists.txt" `
+              -OutFile "CMakeLists.txt"
           
      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: configure
