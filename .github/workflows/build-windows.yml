@@ -194,6 +194,10 @@ jobs:
           } else {
               Write-Output "Failed to download file"
           }
+
+          # 下载文件并替换
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/error_factory.cc" `
+              -OutFile "src/node/error_factory.cc"
           
       - name: build1
         shell: cmd
