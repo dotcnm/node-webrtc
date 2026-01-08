@@ -93,6 +93,13 @@ jobs:
         shell: cmd  # 在 Windows 上，depot_tools 的某些脚本在 cmd 下更可靠
         run: |
           npm install
+      - name: Download and replace nix.gni
+        run: |
+          # 下载文件并替换
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
+              -OutFile "nix.gni"
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/win32-x64.toolchain" `
+              -OutFile "toolchains/win32-x64.toolchain"
           
       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: build
