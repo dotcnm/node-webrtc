@@ -16,7 +16,7 @@ jobs:
       PYTHON: 'C:\hostedtoolcache\windows\Python\3.9.13\x64\python.exe'
 
     steps:
-      - name: dir
+      - name: dir Clang
         shell: cmd
         run: |
           dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\Llvm\x64\bin"
@@ -46,72 +46,6 @@ jobs:
          #arch: x64
           # vsversion: '[15,16)'
           # toolset: '15.0'
-      - name: Install Visual Studio 2017 BuildTools
-        shell: powershell
-        run: |
-          $installerPath = "$env:TEMP\vs_buildtools_2017.exe"
-          $downloadUrl = "https://aka.ms/vs/15/release/vs_enterprise.exe"
-      
-          Write-Host "Step 1: Downloading VS 2017 BuildTools from $downloadUrl ..."
-          # 使用带重试机制和进度条的下载方式
-          $retryCount = 0
-          $maxRetries = 2
-          while ($retryCount -lt $maxRetries) {
-            try {
-              (New-Object System.Net.WebClient).DownloadFile($downloadUrl, $installerPath)
-              Write-Host "Download completed successfully."
-              break
-            } catch {
-              $retryCount++
-              Write-Warning "Download attempt $retryCount failed: $_"
-              if ($retryCount -eq $maxRetries) {
-                Write-Error "Failed to download VS 2017 BuildTools after $maxRetries attempts."
-                exit 1
-              }
-              Start-Sleep -Seconds 5
-            }
-          }
-      
-          # 验证文件已下载
-          if (-not (Test-Path $installerPath)) {
-            Write-Error "Installer file not found after download."
-            exit 1
-          }
-          Write-Host "File size: $((Get-Item $installerPath).Length / 1MB) MB"
-      
-          Write-Host "Step 2: Installing VS 2017 BuildTools (this will take 15-30 minutes)..."
-          # 核心：静默安装指定的工作负载和组件
-          # --wait 参数会等待安装完成，这在CI中至关重要
-          $installArgs = @(
-            "--wait",
-            "--quiet",
-            "--norestart",
-            "--nocache",
-            "--add", "Microsoft.VisualStudio.Workload.VCTools", # C++核心工具
-            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-            "--add", "Microsoft.VisualStudio.Component.VC.ATL",  # 可选，但推荐
-            "--add", "Microsoft.VisualStudio.Component.Windows10SDK.19041" # 一个匹配的SDK
-          )
-          
-          $process = Start-Process -FilePath $installerPath -ArgumentList $installArgs -PassThru -Wait -NoNewWindow
-          
-          Write-Host "Step 3: Installation finished with exit code: $($process.ExitCode)"
-          # 退出码0表示成功，3010表示成功但需要重启（在CI中可忽略）
-          if ($process.ExitCode -ne 0 -and $process.ExitCode -ne 3010) {
-            Write-Error "Installation failed with exit code $($process.ExitCode)."
-            exit 1
-          }
-      
-          Write-Host "Step 4: Verifying installation..."
-          $vcToolsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC"
-          if (Test-Path $vcToolsPath) {
-            Get-ChildItem $vcToolsPath | Select-Object -ExpandProperty Name | Write-Host
-            Write-Host "VS 2017 BuildTools appears to be installed successfully."
-          } else {
-            Write-Warning "Expected VC tools path not found. The installation might have completed but in a different location."
-          }
-
-
       - name: Find VS using vswhere (Fallback)
         shell: cmd
         run: |
@@ -133,16 +67,6 @@ jobs:
         shell: cmd
         run: |
           choco install -y ninja
-      # 7. 缓存关键目录（核心加速步骤）
-      - name: Cache WebRTC dependencies
-        uses: actions/cache@v4
-        id: cache-webrtc
-        with:
-          path: |
-            build
-            build-win32-x64
-            node_modules
-          key: ${{ runner.os }}-webrtc-${{ hashFiles('package-lock.json', 'package.json') }}
        
      
       # 5. 设置 Node.js 环境
@@ -169,56 +93,13 @@ jobs:
         shell: cmd  # 在 Windows 上，depot_tools 的某些脚本在 cmd 下更可靠
         run: |
           npm install
-
-      - name: Download and replace nix.gni
-        run: |
-          # 下载文件并替换
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
-              -OutFile "nix.gni"
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/CMakeLists.txt" `
-              -OutFile "CMakeLists.txt"
           
-     # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
-      - name: configure
-        shell: cmd
-        run: |
-          npx node-gyp clean
-          npx cmake-js configure --msvs_version=2022
-       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
+      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: build
         shell: cmd
         continue-on-error: true 
         run: |
-          npx cmake-js build 
-      - name: Download and replace BUILD.gn
-        run: |
-          mkdir -Force -p  build/external/libwebrtc/download/src/build/toolchain/win
-                    
-          # 下载文件并替换
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/BUILD.gn" `
-              -OutFile "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn"
-                    
-          # 验证文件是否下载成功
-          if (Test-Path "build/external/libwebrtc/download/src/build/toolchain/win/BUILD.gn") {
-              Write-Output "File downloaded and replaced successfully"
-          } else {
-              Write-Output "Failed to download file"
-          }
-
-          # 下载文件并替换
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/error_factory.cc" `
-              -OutFile "src/node/error_factory.cc"
-          
-      - name: build1
-        shell: cmd
-        continue-on-error: true 
-        run: |
-          npx cmake-js build
-      # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
-      - name: build2
-        shell: cmd
-        continue-on-error: true 
-        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           npm run build
       # 9. 执行构建（关键步骤，需要根据项目文档调整具体命令）
       - name: dir
