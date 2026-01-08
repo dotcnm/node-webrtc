@@ -99,6 +99,8 @@ jobs:
           # Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
           #    -OutFile "nix.gni"
           New-Item -Path ./nix.gni -ItemType File -Force
+          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/CMakeLists.txt" `
+              -OutFile "CMakeLists.txt"
           Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/win32-x64.toolchain" `
               -OutFile "toolchains/win32-x64.toolchain"
           
