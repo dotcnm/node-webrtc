@@ -96,8 +96,9 @@ jobs:
       - name: Download and replace nix.gni
         run: |
           # 下载文件并替换
-          Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
-              -OutFile "nix.gni"
+          # Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/nix.gni" `
+          #    -OutFile "nix.gni"
+          type nul > nix.gni
           Invoke-WebRequest -Uri "https://xxllxx.oss-ap-southeast-1.aliyuncs.com/win32-x64.toolchain" `
               -OutFile "toolchains/win32-x64.toolchain"
           
