@@ -117,7 +117,6 @@ jobs:
         run: |
           dir D:\a\node-webrtc\node-webrtc
           
-
       # 10. （可选）上传构建产物
       - name: Upload artifacts
         if: success()
@@ -125,5 +124,5 @@ jobs:
         with:
           name: windows-module
           path: |
-            build-*/
+            build-win32-x64/
             **/*.log
